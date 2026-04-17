@@ -1,0 +1,80 @@
+window {
+    background-color: transparent;
+    background-image: none;
+}
+
+.background {
+    background-color: transparent;
+}
+
+scrolledwindow,
+viewport,
+list,
+listview,
+box {
+    background-color: transparent;
+    border: none;
+}
+
+row,
+listrow {
+    background-color: transparent;
+    padding: 0;
+}
+
+label { font-size: 12px; }
+
+
+.notif-card, .urgency-low, .urgency-critical {
+    padding: 12px 16px;
+    border-radius: 10px;
+    margin: 4px;
+}
+
+/* default notify */
+.notif-card {
+    background-color: rgba(30, 30, 30, 0.7);
+    border-color: white;
+    border-width: 1px;
+}
+
+.notif-card:hover {
+    background-color: rgba(60, 60, 60, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    transition: color 0.2s ease;
+}
+
+/* low notify */
+.urgency-low {
+    background-color: rgba(52, 152, 219, 0.15);
+    border-left: 5px solid #95a5a6;
+    transform: scale(0.95);
+}
+
+.urgency-low:hover {
+    background-color: rgba(52, 152, 219, 0.95);
+    transition: color 0.2s ease;
+}
+
+/* high notify */
+.urgency-critical {
+    background-color: rgba(231, 76, 60, 0.2);
+    border: 1px solid #e74c3c;
+    box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+}
+
+.urgency-critical label {
+    color: #ff6666;
+    font-weight: bold;
+}
+
+.urgency-critical:hover {
+    background-color: rgba(231, 76, 60, 0.95);
+    transition: color 0.2s ease;
+}
+
+.urgency-critical:hover label {
+    color: #ffffff;
+    transition: color 0.2s ease;
+}
+
