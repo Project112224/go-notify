@@ -2,10 +2,10 @@ package ui
 
 import (
 	"fmt"
-	"log"
 	"regexp"
 	"strings"
-	"time"
+
+	extension "go-notify-manager/internal/extension"
 
 	"github.com/diamondburned/gotk4/pkg/glib/v2"
 	"github.com/diamondburned/gotk4/pkg/gtk/v4"
@@ -14,7 +14,7 @@ import (
 
 func NewHistoryRow(app, sum, body string, urgency int, timeStr string, onDelete func()) *gtk.ListBoxRow {
 
-	row := NewRow()
+	row := NewRow(timeStr)
 	fullContent := fmt.Sprintf("%s %s %s", app, sum, body)
 	row.SetName(fullContent)
 
@@ -69,12 +69,15 @@ func getIconName(app string) string {
 	}
 }
 
-func NewRow() *gtk.ListBoxRow {
+func NewRow(timeStr string) *gtk.ListBoxRow {
 	row := gtk.NewListBoxRow()
 	row.SetCanFocus(true)
 	row.SetFocusable(true)
 	row.SetSelectable(true)
 	row.AddCSSClass("history-row")
+	row.AddCSSClass("is-content")
+	rowDate := extension.DateString(timeStr).FormatToHMS("2006-01-02")
+	row.AddCSSClass("date-" + rowDate)
 	return row
 }
 
@@ -137,9 +140,7 @@ func NewBodyLabel(body string) *gtk.Label {
 }
 
 func NewTimeLabel(displayTime string) *gtk.Label {
-
-	convertedTime := formatToHMS(displayTime)
-
+	convertedTime := extension.DateString(displayTime).FormatToHMS()
 	timeLabel := gtk.NewLabel(convertedTime)
 	timeLabel.SetSelectable(true)
 	timeLabel.SetVAlign(gtk.AlignStart)
@@ -157,13 +158,4 @@ func NewDeleteButton(onDelete func()) *gtk.Button {
 		onDelete()
 	})
 	return deleteBtn
-}
-
-func formatToHMS(rawTime string) string {
-	t, err := time.Parse(time.RFC3339Nano, rawTime)
-	if err != nil {
-		log.Println("時間解析失敗:", err)
-		return rawTime
-	}
-	return t.Format("15:04:05")
 }

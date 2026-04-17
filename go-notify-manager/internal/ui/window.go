@@ -1,8 +1,6 @@
 package ui
 
 import (
-	"strings"
-
 	"github.com/diamondburned/gotk4/pkg/gdk/v4"
 	"github.com/diamondburned/gotk4/pkg/glib/v2"
 	"github.com/diamondburned/gotk4/pkg/gtk/v4"
@@ -138,6 +136,7 @@ func CreateDateHeader(dateText string, listbox *gtk.ListBox) *gtk.Box {
 	box := gtk.NewBox(gtk.OrientationVertical, 0)
 	box.SetHExpand(true)
 	box.AddCSSClass("date-header-box")
+	box.AddCSSClass("is-header")
 
 	sep := gtk.NewSeparator(gtk.OrientationHorizontal)
 	sep.AddCSSClass("header-separator")
@@ -174,38 +173,38 @@ func CreateDateHeader(dateText string, listbox *gtk.ListBox) *gtk.Box {
 		}
 
 		children := listbox.ObserveChildren()
+		targetDateClass := "date-" + dateText
+
 		for i := uint(0); i < children.NItems(); i++ {
 			item := children.Item(i)
-
 			row, ok := item.Cast().(*gtk.ListBoxRow)
 			if !ok {
 				continue
 			}
 
-			name := ""
-			rowChild := row.Child()
-			if rowChild != nil {
-				if box, ok := rowChild.(*gtk.Box); ok {
-					name = box.Name()
+			if row.HasCSSClass(targetDateClass) && row.HasCSSClass("is-content") {
+
+				if row.Header() != nil {
+					if child := row.Child(); child != nil {
+						if widget, ok := child.(*gtk.Widget); ok {
+							widget.SetVisible(!isCollapsed)
+						}
+					}
+					if isCollapsed {
+						row.AddCSSClass("collapsed-header-row")
+					} else {
+						row.RemoveCSSClass("collapsed-header-row")
+					}
+					row.SetVisible(true)
+
+				} else {
+					row.SetVisible(!isCollapsed)
 				}
 			}
 
-			if len(name) >= 10 && name[:10] == dateText {
-				if strings.HasPrefix(name, dateText) {
-					if isCollapsed {
-						row.SetChildVisible(false)
-						row.SetSizeRequest(-1, 0)
-						row.SetFocusable(false)
-						row.AddCSSClass("collapsed-row")
-					} else {
-						row.SetChildVisible(true)
-						row.SetSizeRequest(-1, -1)
-						row.SetFocusable(true)
-						row.RemoveCSSClass("collapsed-row")
-					}
-				}
-			}
 		}
+
+		listbox.QueueAllocate()
 	})
 
 	return box

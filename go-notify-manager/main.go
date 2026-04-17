@@ -93,7 +93,7 @@ func main() {
 				win.ListBox.Remove(child)
 			}
 
-			rows, _ := db.LoadHistory(100)
+			rows, _ := db.LoadHistory(nil)
 			defer rows.Close()
 
 			for rows.Next() {
@@ -121,7 +121,6 @@ func main() {
 		})
 
 		// Switch Notify Status
-
 		var isLocked bool
 		conn, _ := dbus.SessionBus()
 		obj := conn.Object("org.freedesktop.Notifications", "/org/freedesktop/Notifications")

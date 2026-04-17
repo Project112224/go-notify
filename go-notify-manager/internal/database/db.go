@@ -21,9 +21,13 @@ func NewManagerDB(dbPath string) (*ManagerDB, error) {
 	return &ManagerDB{Conn: db}, nil
 }
 
-func (m *ManagerDB) LoadHistory(limit int) (*sql.Rows, error) {
-	query := fmt.Sprintf("SELECT id, app_name, summary, body, urgency, created_at FROM %s ORDER BY created_at DESC LIMIT ?", tableName)
-	return m.Conn.Query(query, limit)
+func (m *ManagerDB) LoadHistory(limit *int) (*sql.Rows, error) {
+	baseQuery := fmt.Sprintf("SELECT id, app_name, summary, body, urgency, created_at FROM %s ORDER BY created_at DESC", tableName)
+	if limit == nil {
+		return m.Conn.Query(baseQuery)
+	}
+	query := baseQuery + " LIMIT ?"
+	return m.Conn.Query(query, *limit)
 }
 
 func (m *ManagerDB) ClearHistory() error {
