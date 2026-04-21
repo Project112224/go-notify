@@ -76,6 +76,7 @@ func createTextContainer(summary string, content string) *gtk.Box {
 	body := gtk.NewLabel(content)
 	body.SetXAlign(0)
 	body.SetWrap(true)
+	body.SetLines(5)
 	body.SetWrapMode(pango.WrapWordChar)
 	body.SetEllipsize(pango.EllipsizeEnd)
 	body.SetMaxWidthChars(100)
