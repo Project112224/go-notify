@@ -22,6 +22,7 @@ const (
 
 func (ctrl *NotifWindow) NewNotifCard(notif *models.Notification) *gtk.Box {
 	card := gtk.NewBox(gtk.OrientationHorizontal, 12)
+	card.SetSizeRequest(350, -1)
 	isHovering := false
 	setUrgencyClass(card, notif.Urgency)
 
@@ -59,27 +60,35 @@ func createIconWidget(iconPath string) *gtk.Image {
 	}
 	icon.SetPixelSize(40)
 	icon.SetVAlign(gtk.AlignStart)
+	icon.SetHExpand(false)
 	return icon
 }
 
 func createTextContainer(summary string, content string) *gtk.Box {
 	container := gtk.NewBox(gtk.OrientationVertical, 2)
+	container.SetHExpand(true)
+	container.SetVAlign(gtk.AlignCenter)
 
 	title := gtk.NewLabel("")
 	title.SetMarkup(fmt.Sprintf("<b>%s</b>", summary))
+	title.AddCSSClass("white-label")
 	title.SetXAlign(0)
+	title.SetHExpand(true)
 	title.SetWrap(true)
 	title.SetWrapMode(pango.WrapWordChar)
 	title.SetEllipsize(pango.EllipsizeEnd)
-	title.SetMaxWidthChars(20)
+	title.SetLines(1)
+	title.SetMaxWidthChars(30)
 
 	body := gtk.NewLabel(content)
+	body.AddCSSClass("white-label")
 	body.SetXAlign(0)
+	body.SetHExpand(true)
 	body.SetWrap(true)
 	body.SetLines(5)
 	body.SetWrapMode(pango.WrapWordChar)
 	body.SetEllipsize(pango.EllipsizeEnd)
-	body.SetMaxWidthChars(100)
+	body.SetMaxWidthChars(40)
 
 	container.Append(title)
 	container.Append(body)
