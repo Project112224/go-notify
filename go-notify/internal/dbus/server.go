@@ -1,4 +1,4 @@
-// internal/dbus/server.go
+// Package dbus 提供 D-Bus 推播功能服務
 package dbus
 
 import (
@@ -49,7 +49,6 @@ func StartServer(notifChan chan *models.Notification, abService *database.DBServ
 }
 
 // TODO: 核心業務邏輯
-
 // test: gdbus call --session --dest org.freedesktop.Notifications --object-path /org/freedesktop/Notifications --method org.freedesktop.Notifications.SetFocusMode true
 func (s *NotificationServer) SetFocusMode(enabled bool) *dbus.Error {
 	s.Locked = enabled
@@ -61,11 +60,8 @@ func (s *NotificationServer) GetFocusMode() (bool, *dbus.Error) {
 	return s.Locked, nil
 }
 
-func (s *NotificationServer) Notify(app_name string, replaces_id uint32, app_icon string, summary string, body string, actions []string, hints map[string]dbus.Variant, expire_timeout int32) (uint32, *dbus.Error) {
+func (s *NotificationServer) Notify(appName string, replacesID uint32, appIcon string, summary string, body string, actions []string, hints map[string]dbus.Variant, expireTimeout int32) (uint32, *dbus.Error) {
 
-	if s.Locked {
-		return 0, nil
-	}
 	// log
 	for key, variant := range hints {
 		strVal := variantToString(variant)
@@ -88,27 +84,32 @@ func (s *NotificationServer) Notify(app_name string, replaces_id uint32, app_ico
 	urgency := getUrgency(hints)
 	desktopEntry := getDesktopEntry(hints)
 	defaultKey := getDefaultActionKey(actions)
-	appIcon := getAppIcon(hints, app_icon)
+	notifyAppIcon := getAppIcon(hints, appIcon)
+
+	s.dbService.Save(&models.HistoryNotif{
+		AppName:    appName,
+		ReplacesId: replacesID,
+		Summary:    summary,
+		Body:       result,
+		Urgency:    int(urgency),
+		Icon:       notifyAppIcon,
+		Time:       time.Now(),
+	})
+
+	if s.Locked {
+		return 0, nil
+	}
 
 	s.notifChan <- &models.Notification{
-		AppName:          app_name,
+		AppName:          appName,
 		ID:               currentID,
 		Summary:          summary,
 		Body:             body,
 		Urgency:          urgency,
-		Icon:             appIcon,
+		Icon:             notifyAppIcon,
 		DefaultActionKey: defaultKey,
 		DesktopEntry:     desktopEntry,
 	}
-
-	s.dbService.Save(&models.HistoryNotif{
-		AppName: app_name,
-		Summary: summary,
-		Body:    result,
-		Urgency: int(urgency),
-		Icon:    appIcon,
-		Time:    time.Now(),
-	})
 
 	return currentID, nil
 }
