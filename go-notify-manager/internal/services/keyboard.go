@@ -22,13 +22,11 @@ func (s *KeyboardService) BindShortcuts() {
 	s.win.Window.AddController(keyCtrl)
 
 	keyCtrl.ConnectKeyPressed(func(keyval uint, keycode uint, state gdk.ModifierType) bool {
-		// 1. 處理 Q 關閉 (排除搜尋框輸入)
 		if keyval == gdk.KEY_q && !s.win.SearchEntry.IsFocus() {
 			s.win.Window.Close()
 			return true
 		}
 
-		// 2. 處理 Ctrl + C 複製
 		if keyval == gdk.KEY_c && state.Has(gdk.ControlMask) {
 			return s.handleCopy()
 		}
@@ -37,7 +35,6 @@ func (s *KeyboardService) BindShortcuts() {
 	})
 }
 
-// 私有方法處理複製邏輯
 func (s *KeyboardService) handleCopy() bool {
 	focusWidget := s.win.Window.Focus()
 	if focusWidget == nil {

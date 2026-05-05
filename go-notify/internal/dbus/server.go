@@ -97,7 +97,7 @@ func (s *NotificationServer) Notify(appName string, replacesID uint32, appIcon s
 	})
 
 	if s.Locked {
-		return 0, nil
+		return currentID, nil
 	}
 
 	s.notifChan <- &models.Notification{

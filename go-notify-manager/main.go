@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -124,13 +125,21 @@ func main() {
 		var isLocked bool
 		conn, _ := dbus.SessionBus()
 		obj := conn.Object("org.freedesktop.Notifications", "/org/freedesktop/Notifications")
-		obj.Call("org.freedesktop.Notifications.GetFocusMode", 0).Store(&isLocked)
+		switchErr := obj.Call("org.freedesktop.Notifications.GetFocusMode", 0).Store(&isLocked)
+		if switchErr != nil {
+			win.SwitchButton.SetActive(false)
+		} else {
+			win.SwitchButton.SetActive(!isLocked)
+		}
+
 		win.SwitchButton.ConnectStateSet(func(state bool) bool {
 			obj.Call("org.freedesktop.Notifications.SetFocusMode", 0, !state)
 			if state {
-				log.Println("已開啟")
+				log.Println("[go-notify-manager] 已開啟")
+				exec.Command("pactl", "set-sink-mute", "@DEFAULT_SINK@", "1").Run()
 			} else {
-				log.Println("已關閉")
+				log.Println("[go-notify-manager] 已關閉")
+				exec.Command("pactl", "set-sink-mute", "@DEFAULT_SINK@", "0").Run()
 			}
 			return false
 		})
