@@ -97,16 +97,74 @@ func createTextContainer(summary string, content string) *gtk.Box {
 
 func (ctrl *NotifWindow) setCardGestures(card *gtk.Box, notif *models.Notification, isHovering *bool) {
 	gesture := gtk.NewGestureClick()
-	gesture.SetButton(0)
+	gesture.SetButton(1)
 	gesture.ConnectPressed(func(nPress int, x, y float64) {
-		button := gesture.CurrentButton()
-		if button == 1 {
-			ctrl.emitDBusSignals(notif)
+		log.Printf("[NotifCard] 點擊通知卡片 (ID: %d, App: %s, Summary: %s)", notif.ID, notif.AppName, notif.Summary)
+		ctrl.emitDBusSignals(notif)
+		urls := extractURLs(notif.Body)
+		if len(urls) > 0 {
+			log.Printf("[NotifCard] 偵測到 URL，嘗試開啟: %s", urls[0])
+			openURL(urls[0])
+		} else {
 			openApplication(notif.AppName, notif.DesktopEntry)
 		}
 		ctrl.dismissCard(card)
 	})
 	card.AddController(gesture)
+}
+
+func openURL(rawURL string) {
+	log.Printf("[openURL] 開始嘗試開啟網址: %s", rawURL)
+
+	go func() {
+		// 方法 1: xdg-open
+		cmd1 := exec.Command("xdg-open", rawURL)
+		cmd1.Env = os.Environ()
+		out1, err1 := cmd1.CombinedOutput()
+		if err1 == nil {
+			log.Printf("[openURL] xdg-open 成功開啟: %s", rawURL)
+			return
+		}
+		log.Printf("[openURL] xdg-open 失敗 (%v), 輸出: %s", err1, string(out1))
+
+		// 方法 2: firefox
+		cmd2 := exec.Command("firefox", rawURL)
+		cmd2.Env = os.Environ()
+		out2, err2 := cmd2.CombinedOutput()
+		if err2 == nil {
+			log.Printf("[openURL] firefox 成功開啟: %s", rawURL)
+			return
+		}
+		log.Printf("[openURL] firefox 失敗 (%v), 輸出: %s", err2, string(out2))
+
+		// 方法 3: gio open
+		cmd3 := exec.Command("gio", "open", rawURL)
+		cmd3.Env = os.Environ()
+		out3, err3 := cmd3.CombinedOutput()
+		if err3 == nil {
+			log.Printf("[openURL] gio open 成功開啟: %s", rawURL)
+			return
+		}
+		log.Printf("[openURL] gio open 失敗 (%v), 輸出: %s", err3, string(out3))
+	}()
+}
+
+func extractURLs(text string) []string {
+	re := regexp.MustCompile(`https?://[^\s<>"']+|www\.[^\s<>"']+\.[^\s<>"']+`)
+	matches := re.FindAllString(text, -1)
+	var urls []string
+	seen := make(map[string]bool)
+	for _, m := range matches {
+		url := m
+		if strings.HasPrefix(m, "www.") {
+			url = "https://" + m
+		}
+		if !seen[url] {
+			seen[url] = true
+			urls = append(urls, url)
+		}
+	}
+	return urls
 }
 
 func (ctrl *NotifWindow) emitDBusSignals(notif *models.Notification) {
@@ -172,31 +230,80 @@ func findAndExecDesktop(appName string) string {
 	}
 
 	target := strings.ToLower(appName)
+	exactName := target + ".desktop"
 
+	// 1. 精確比對：完全符合 <target>.desktop (如 firefox.desktop)
+	for _, path := range searchPaths {
+		fullPath := filepath.Join(path, exactName)
+		if cmd := extractExecFromDesktopFile(fullPath); cmd != "" {
+			log.Printf("從精確匹配 %s 找到執行指令: %s", exactName, cmd)
+			return cmd
+		}
+	}
+
+	// 2. ID / 反向網域比對：如 org.mozilla.firefox.desktop
 	for _, path := range searchPaths {
 		files, err := os.ReadDir(path)
 		if err != nil {
 			continue
 		}
-
 		for _, f := range files {
-			if strings.Contains(strings.ToLower(f.Name()), target) && strings.HasSuffix(f.Name(), ".desktop") {
+			nameLower := strings.ToLower(f.Name())
+			if !strings.HasSuffix(nameLower, ".desktop") {
+				continue
+			}
+			base := strings.TrimSuffix(nameLower, ".desktop")
+			if base == target || strings.HasSuffix(base, "."+target) {
 				fullPath := filepath.Join(path, f.Name())
-				content, err := os.ReadFile(fullPath)
-				if err != nil {
-					continue
-				}
-
-				lines := strings.Split(string(content), "\n")
-				for _, line := range lines {
-					if strings.HasPrefix(line, "Exec=") {
-						execLine := strings.TrimPrefix(line, "Exec=")
-						finalCmd := cleanExecLine(execLine)
-						log.Printf("從 %s 找到執行指令: %s", f.Name(), finalCmd)
-						return finalCmd
-					}
+				if cmd := extractExecFromDesktopFile(fullPath); cmd != "" {
+					log.Printf("從 ID 匹配 %s 找到執行指令: %s", f.Name(), cmd)
+					return cmd
 				}
 			}
+		}
+	}
+
+	// 3. 避免誤觸衍生版本 (-developer, -nightly, -esr)，除非 target 原本就指定
+	for _, path := range searchPaths {
+		files, err := os.ReadDir(path)
+		if err != nil {
+			continue
+		}
+		for _, f := range files {
+			nameLower := strings.ToLower(f.Name())
+			if !strings.HasSuffix(nameLower, ".desktop") {
+				continue
+			}
+			if strings.Contains(nameLower, target) {
+				if !strings.Contains(target, "developer") && strings.Contains(nameLower, "developer") {
+					continue
+				}
+				if !strings.Contains(target, "nightly") && strings.Contains(nameLower, "nightly") {
+					continue
+				}
+				fullPath := filepath.Join(path, f.Name())
+				if cmd := extractExecFromDesktopFile(fullPath); cmd != "" {
+					log.Printf("從模糊匹配 %s 找到執行指令: %s", f.Name(), cmd)
+					return cmd
+				}
+			}
+		}
+	}
+
+	return target
+}
+
+func extractExecFromDesktopFile(fullPath string) string {
+	content, err := os.ReadFile(fullPath)
+	if err != nil {
+		return ""
+	}
+
+	lines := strings.Split(string(content), "\n")
+	for _, line := range lines {
+		if strings.HasPrefix(line, "Exec=") {
+			execLine := strings.TrimPrefix(line, "Exec=")
+			return cleanExecLine(execLine)
 		}
 	}
 	return ""

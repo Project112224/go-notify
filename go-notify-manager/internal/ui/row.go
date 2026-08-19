@@ -2,7 +2,9 @@ package ui
 
 import (
 	"fmt"
+	"log"
 	"os"
+	"os/exec"
 	"regexp"
 	"strings"
 
@@ -28,14 +30,6 @@ func NewHistoryRow(app, sum, body, iconPath string, urgency int, timeStr string,
 	contentBox := NewContentBox()
 
 	bodyLabel := NewBodyLabel(body)
-
-	gesture := gtk.NewGestureClick()
-	gesture.SetPropagationPhase(gtk.PhaseCapture)
-	gesture.ConnectPressed(func(n int, x, y float64) {
-		bodyLabel.GrabFocus()
-	})
-	bodyLabel.AddController(gesture)
-
 	timeLabel := NewTimeLabel(timeStr)
 
 	deleteBtn := NewDeleteButton(onDelete)
@@ -43,12 +37,109 @@ func NewHistoryRow(app, sum, body, iconPath string, urgency int, timeStr string,
 	// Append
 	contentBox.Append(titleLabel)
 	contentBox.Append(bodyLabel)
+
+	urls := extractURLs(body)
+	if urlBox := createURLButtons(urls); urlBox != nil {
+		contentBox.Append(urlBox)
+	}
+
+	if len(urls) > 0 {
+		click := gtk.NewGestureClick()
+		click.SetButton(1)
+		click.ConnectReleased(func(n int, x, y float64) {
+			start, end, hasSelection := bodyLabel.SelectionBounds()
+			if !hasSelection || start == end {
+				openURL(urls[0])
+			}
+		})
+		bodyLabel.AddController(click)
+	}
+
 	contentBox.Append(timeLabel)
 	hbox.Append(img)
 	hbox.Append(contentBox)
 	hbox.Append(deleteBtn)
 	row.SetChild(hbox)
 	return row
+}
+
+func openURL(rawURL string) {
+	log.Printf("[openURL] 開始嘗試開啟網址: %s", rawURL)
+
+	go func() {
+		// 方法 1: xdg-open
+		cmd1 := exec.Command("xdg-open", rawURL)
+		cmd1.Env = os.Environ()
+		out1, err1 := cmd1.CombinedOutput()
+		if err1 == nil {
+			log.Printf("[openURL] xdg-open 成功開啟: %s", rawURL)
+			return
+		}
+		log.Printf("[openURL] xdg-open 失敗 (%v), 輸出: %s", err1, string(out1))
+
+		// 方法 2: firefox
+		cmd2 := exec.Command("firefox", rawURL)
+		cmd2.Env = os.Environ()
+		out2, err2 := cmd2.CombinedOutput()
+		if err2 == nil {
+			log.Printf("[openURL] firefox 成功開啟: %s", rawURL)
+			return
+		}
+		log.Printf("[openURL] firefox 失敗 (%v), 輸出: %s", err2, string(out2))
+
+		// 方法 3: gio open
+		cmd3 := exec.Command("gio", "open", rawURL)
+		cmd3.Env = os.Environ()
+		out3, err3 := cmd3.CombinedOutput()
+		if err3 == nil {
+			log.Printf("[openURL] gio open 成功開啟: %s", rawURL)
+			return
+		}
+		log.Printf("[openURL] gio open 失敗 (%v), 輸出: %s", err3, string(out3))
+	}()
+}
+
+func extractURLs(text string) []string {
+	re := regexp.MustCompile(`https?://[^\s<>"']+|www\.[^\s<>"']+\.[^\s<>"']+`)
+	matches := re.FindAllString(text, -1)
+	var urls []string
+	seen := make(map[string]bool)
+	for _, m := range matches {
+		url := m
+		if strings.HasPrefix(m, "www.") {
+			url = "https://" + m
+		}
+		if !seen[url] {
+			seen[url] = true
+			urls = append(urls, url)
+		}
+	}
+	return urls
+}
+
+func createURLButtons(urls []string) *gtk.Box {
+	if len(urls) == 0 {
+		return nil
+	}
+	box := gtk.NewBox(gtk.OrientationHorizontal, 6)
+	box.SetMarginTop(4)
+	box.SetMarginBottom(2)
+
+	for _, u := range urls {
+		targetURL := u
+		displayURL := u
+		if len(displayURL) > 35 {
+			displayURL = displayURL[:32] + "..."
+		}
+		btn := gtk.NewButtonWithLabel("🔗 " + displayURL)
+		btn.AddCSSClass("url-link-button")
+		btn.SetTooltipText("點擊在 Firefox 開啟: " + targetURL)
+		btn.ConnectClicked(func() {
+			openURL(targetURL)
+		})
+		box.Append(btn)
+	}
+	return box
 }
 
 func linkify(text string) string {
@@ -174,9 +265,11 @@ func NewBodyLabel(body string) *gtk.Label {
 	bodyLabel.SetXAlign(0)
 	bodyLabel.AddCSSClass("dim-label")
 
-	// bodyLabel.SetSelectable(true)
+	bodyLabel.SetSelectable(true)
 	bodyLabel.ConnectActivateLink(func(uri string) bool {
-		return false
+		log.Println("[go-notify-manager] ActivateLink triggered for URI:", uri)
+		go exec.Command("firefox", uri).Start()
+		return true
 	})
 	return bodyLabel
 }

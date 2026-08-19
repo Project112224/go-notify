@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"go-notify-manager/internal/database"
+	"go-notify-manager/internal/logger"
 	service "go-notify-manager/internal/services"
 	"go-notify-manager/internal/ui"
 
@@ -22,6 +23,9 @@ const (
 )
 
 func main() {
+	if logFile, err := logger.InitLogger("go-notify-manager.log"); err == nil {
+		defer logFile.Close()
+	}
 
 	app := gtk.NewApplication("com.github.june.notif-manager", 0)
 	app.ConnectActivate(func() {

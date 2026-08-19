@@ -8,6 +8,7 @@ import (
 	"go-notify/internal/database"
 	dbus "go-notify/internal/dbus"
 	ui "go-notify/internal/ui"
+	"go-notify/internal/util"
 
 	"go-notify/internal/models"
 
@@ -22,6 +23,10 @@ const (
 )
 
 func main() {
+	if logFile, err := util.InitLogger("go-notify.log"); err == nil {
+		defer logFile.Close()
+	}
+
 	notifChan := make(chan *models.Notification, 50)
 	home, _ := os.UserHomeDir()
 
