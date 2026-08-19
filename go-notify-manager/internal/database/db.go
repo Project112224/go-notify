@@ -22,7 +22,7 @@ func NewManagerDB(dbPath string) (*ManagerDB, error) {
 }
 
 func (m *ManagerDB) LoadHistory(limit *int) (*sql.Rows, error) {
-	baseQuery := fmt.Sprintf("SELECT id, app_name, summary, body, urgency, created_at FROM %s ORDER BY created_at DESC", tableName)
+	baseQuery := fmt.Sprintf("SELECT id, app_name, summary, body, urgency, icon_path, created_at FROM %s ORDER BY created_at DESC", tableName)
 	if limit == nil {
 		return m.Conn.Query(baseQuery)
 	}

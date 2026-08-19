@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"strings"
 
@@ -12,7 +13,7 @@ import (
 	"github.com/diamondburned/gotk4/pkg/pango"
 )
 
-func NewHistoryRow(app, sum, body string, urgency int, timeStr string, onDelete func()) *gtk.ListBoxRow {
+func NewHistoryRow(app, sum, body, iconPath string, urgency int, timeStr string, onDelete func()) *gtk.ListBoxRow {
 
 	row := NewRow(timeStr)
 	fullContent := fmt.Sprintf("%s %s %s", app, sum, body)
@@ -22,8 +23,7 @@ func NewHistoryRow(app, sum, body string, urgency int, timeStr string, onDelete 
 	hbox.SetName(timeStr)
 
 	titleLabel := NewTitleLabel(sum, urgency)
-	iconName := getIconName(app)
-	img := NewIcon(iconName)
+	img := createIconWidget(iconPath, app)
 
 	contentBox := NewContentBox()
 
@@ -56,14 +56,51 @@ func linkify(text string) string {
 	return re.ReplaceAllString(text, `<a href="$1">$1</a>`)
 }
 
-func getIconName(app string) string {
-	switch strings.ToLower(app) {
-	case "discord":
+func createIconWidget(iconPath string, appName string) *gtk.Image {
+	var img *gtk.Image
+
+	if strings.HasPrefix(iconPath, "/") {
+		if _, err := os.Stat(iconPath); err == nil {
+			img = gtk.NewImageFromFile(iconPath)
+			img.SetPixelSize(36)
+			img.SetVAlign(gtk.AlignStart)
+			return img
+		}
+	} else if iconPath != "" {
+		img = gtk.NewImageFromIconName(iconPath)
+		img.SetPixelSize(36)
+		img.SetVAlign(gtk.AlignStart)
+		return img
+	}
+
+	iconName := resolveAppIconName(appName)
+	img = gtk.NewImageFromIconName(iconName)
+	img.SetPixelSize(36)
+	img.SetVAlign(gtk.AlignStart)
+	return img
+}
+
+func resolveAppIconName(app string) string {
+	lower := strings.ToLower(app)
+	switch {
+	case strings.Contains(lower, "discord"):
 		return "discord"
-	case "firefox":
+	case strings.Contains(lower, "firefox"):
 		return "firefox"
-	case "google-chrome":
+	case strings.Contains(lower, "chrome"):
 		return "google-chrome"
+	case strings.Contains(lower, "telegram"):
+		return "telegram"
+	case strings.Contains(lower, "spotify"):
+		return "spotify"
+	case strings.Contains(lower, "code") || strings.Contains(lower, "vscode"):
+		return "com.visualstudio.code"
+	case strings.Contains(lower, "terminal") || strings.Contains(lower, "alacritty") || strings.Contains(lower, "kitty"):
+		return "utilities-terminal"
+	case strings.Contains(lower, "notify"):
+		return "notifications"
+	case lower != "":
+		return lower
 	default:
 		return "dialog-information"
 	}

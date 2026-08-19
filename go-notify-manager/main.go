@@ -50,13 +50,13 @@ func main() {
 			defer rows.Close()
 
 			for rows.Next() {
-				var appName, sum, body, createdAt string
+				var appName, sum, body, iconPath, createdAt string
 				var urgency int
 				var id int
 
-				rows.Scan(&id, &appName, &sum, &body, &urgency, &createdAt)
+				rows.Scan(&id, &appName, &sum, &body, &urgency, &iconPath, &createdAt)
 				currentID := id
-				row := ui.NewHistoryRow(appName, sum, body, urgency, createdAt, func() {
+				row := ui.NewHistoryRow(appName, sum, body, iconPath, urgency, createdAt, func() {
 					err := db.DeleteOne(currentID)
 					if err != nil {
 						log.Println(err)
