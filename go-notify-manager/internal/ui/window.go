@@ -132,7 +132,7 @@ func NewListView() *ListViewResult {
 	}
 }
 
-func CreateDateHeader(dateText string, listbox *gtk.ListBox) *gtk.Box {
+func CreateDateHeader(dateText string, listbox *gtk.ListBox, onDeleteDate func()) *gtk.Box {
 	box := gtk.NewBox(gtk.OrientationVertical, 0)
 	box.SetHExpand(true)
 	box.AddCSSClass("date-header-box")
@@ -146,7 +146,12 @@ func CreateDateHeader(dateText string, listbox *gtk.ListBox) *gtk.Box {
 
 	hbox := gtk.NewBox(gtk.OrientationHorizontal, 10)
 	hbox.SetMarginStart(12)
+	hbox.SetMarginEnd(12)
 	hbox.SetMarginTop(10)
+	hbox.SetHExpand(true)
+
+	titleBox := gtk.NewBox(gtk.OrientationHorizontal, 10)
+	titleBox.SetHExpand(true)
 
 	arrow := gtk.NewImageFromIconName("pan-down-symbolic")
 	arrow.SetMarginBottom(2)
@@ -154,12 +159,25 @@ func CreateDateHeader(dateText string, listbox *gtk.ListBox) *gtk.Box {
 	label.SetYAlign(0.5)
 	label.AddCSSClass("date-header-label")
 
-	hbox.Append(arrow)
-	hbox.Append(label)
+	titleBox.Append(arrow)
+	titleBox.Append(label)
+	hbox.Append(titleBox)
+
+	if onDeleteDate != nil {
+		deleteBtn := gtk.NewButtonFromIconName("user-trash-symbolic")
+		deleteBtn.AddCSSClass("delete-button")
+		deleteBtn.SetVAlign(gtk.AlignCenter)
+		deleteBtn.SetHAlign(gtk.AlignEnd)
+		deleteBtn.ConnectClicked(func() {
+			onDeleteDate()
+		})
+		hbox.Append(deleteBtn)
+	}
+
 	box.Append(hbox)
 
 	click := gtk.NewGestureClick()
-	hbox.AddController(click)
+	titleBox.AddController(click)
 
 	isCollapsed := false
 	click.ConnectReleased(func(n int, x, y float64) {

@@ -49,3 +49,9 @@ func (m *ManagerDB) DeleteOne(id int) error {
 	}
 	return nil
 }
+
+func (m *ManagerDB) DeleteByDate(dateStr string) error {
+	query := fmt.Sprintf("DELETE FROM %s WHERE created_at LIKE ?", tableName)
+	_, err := m.Conn.Exec(query, dateStr+"%")
+	return err
+}

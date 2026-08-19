@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/diamondburned/gotk4/pkg/core/glib"
+	"github.com/diamondburned/gotk4/pkg/glib/v2"
 	"github.com/diamondburned/gotk4/pkg/gtk/v4"
 	"github.com/diamondburned/gotk4/pkg/pango"
 
@@ -70,7 +70,7 @@ func createTextContainer(summary string, content string) *gtk.Box {
 	container.SetVAlign(gtk.AlignCenter)
 
 	title := gtk.NewLabel("")
-	title.SetMarkup(fmt.Sprintf("<b>%s</b>", summary))
+	title.SetMarkup(fmt.Sprintf("<b>%s</b>", glib.MarkupEscapeText(summary)))
 	title.AddCSSClass("white-label")
 	title.SetXAlign(0)
 	title.SetHExpand(true)
@@ -85,7 +85,7 @@ func createTextContainer(summary string, content string) *gtk.Box {
 	body.SetXAlign(0)
 	body.SetHExpand(true)
 	body.SetWrap(true)
-	body.SetLines(5)
+	body.SetLines(2)
 	body.SetWrapMode(pango.WrapWordChar)
 	body.SetEllipsize(pango.EllipsizeEnd)
 	body.SetMaxWidthChars(40)

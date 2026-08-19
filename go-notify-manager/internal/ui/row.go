@@ -87,6 +87,7 @@ func NewHBox() *gtk.Box {
 	hbox.SetMarginEnd(15)
 	hbox.SetMarginTop(18)
 	hbox.SetMarginBottom(18)
+	hbox.SetHExpand(true)
 
 	return hbox
 }
@@ -94,10 +95,14 @@ func NewHBox() *gtk.Box {
 func NewTitleLabel(sum string, urgency int) *gtk.Label {
 	titleLabel := gtk.NewLabel("")
 	titleLabel.SetSelectable(true)
-	titleLabel.SetMarkup(fmt.Sprintf("<span size='medium' weight='bold'>%s</span>", sum))
+	escapedSum := glib.MarkupEscapeText(sum)
+	titleLabel.SetMarkup(fmt.Sprintf("<span size='medium' weight='bold'>%s</span>", escapedSum))
 	titleLabel.SetXAlign(0)
+	titleLabel.SetHExpand(true)
+	titleLabel.SetWrap(true)
+	titleLabel.SetWrapMode(pango.WrapWordChar)
 	if urgency == 2 {
-		titleLabel.SetMarkup(fmt.Sprintf("<span foreground='red'><b>%s</b></span>", sum))
+		titleLabel.SetMarkup(fmt.Sprintf("<span foreground='red'><b>%s</b></span>", escapedSum))
 	}
 
 	return titleLabel
@@ -112,7 +117,6 @@ func NewIcon(iconName string) *gtk.Image {
 func NewContentBox() *gtk.Box {
 	vbox := gtk.NewBox(gtk.OrientationVertical, 2)
 	vbox.SetHExpand(true)
-	vbox.SetHAlign(gtk.AlignStart)
 	return vbox
 }
 
@@ -127,7 +131,6 @@ func NewBodyLabel(body string) *gtk.Label {
 	bodyLabel.SetWrapMode(pango.WrapWordChar)
 	bodyLabel.SetLines(0)
 	bodyLabel.SetEllipsize(pango.EllipsizeNone)
-	bodyLabel.SetMaxWidthChars(50)
 	bodyLabel.SetHExpand(true)
 	bodyLabel.SetXAlign(0)
 	bodyLabel.AddCSSClass("dim-label")

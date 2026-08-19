@@ -39,10 +39,18 @@ func NewNotifWindow(app *gtk.Application, cssData []byte) *NotifWindow {
 	mainBox.SetMarginStart(10)
 	mainBox.SetMarginEnd(10)
 
+	scrolled := gtk.NewScrolledWindow()
+	scrolled.SetPolicy(gtk.PolicyNever, gtk.PolicyAutomatic)
+	scrolled.SetPropagateNaturalHeight(true)
+	scrolled.SetMaxContentHeight(600)
+	scrolled.SetVExpand(true)
+	scrolled.SetHExpand(true)
+
 	list := gtk.NewListBox()
 	list.SetSelectionMode(gtk.SelectionNone)
 
-	mainBox.Append(list)
+	scrolled.SetChild(list)
+	mainBox.Append(scrolled)
 	window.SetChild(mainBox)
 	window.Present()
 

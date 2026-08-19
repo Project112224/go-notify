@@ -39,54 +39,6 @@ func main() {
 		kbService := service.NewKeyboardService(win)
 		kbService.BindShortcuts()
 
-		// ListHeader
-		win.ListBox.SetHeaderFunc(func(row *gtk.ListBoxRow, before *gtk.ListBoxRow) {
-			currentFullDate := ""
-			if box, ok := row.Child().(*gtk.Box); ok {
-				currentFullDate = box.Name()
-			}
-
-			if len(currentFullDate) < 10 {
-				return
-			}
-			currentDate := currentFullDate[:10]
-
-			if before == nil {
-				row.SetHeader(ui.CreateDateHeader(currentDate, win.ListBox))
-				return
-			}
-
-			beforeFullDate := ""
-			if box, ok := before.Child().(*gtk.Box); ok {
-				beforeFullDate = box.Name()
-			}
-
-			if len(beforeFullDate) < 10 {
-				return
-			}
-			beforeDate := beforeFullDate[:10]
-
-			if currentDate != beforeDate {
-				row.SetHeader(ui.CreateDateHeader(currentDate, win.ListBox))
-			} else {
-				row.SetHeader(nil)
-			}
-		})
-
-		// Filter
-		win.ListBox.SetFilterFunc(func(row *gtk.ListBoxRow) bool {
-			query := strings.ToLower(win.SearchEntry.Text())
-			if query == "" {
-				return true
-			}
-			target := strings.ToLower(row.Name())
-			return strings.Contains(target, query)
-		})
-
-		win.SearchEntry.ConnectChanged(func() {
-			win.ListBox.InvalidateFilter()
-		})
-
 		// SQL Data
 		var loadData func()
 		loadData = func() {
@@ -115,6 +67,62 @@ func main() {
 			}
 		}
 
+		// ListHeader
+		win.ListBox.SetHeaderFunc(func(row *gtk.ListBoxRow, before *gtk.ListBoxRow) {
+			currentFullDate := ""
+			if box, ok := row.Child().(*gtk.Box); ok {
+				currentFullDate = box.Name()
+			}
+
+			if len(currentFullDate) < 10 {
+				return
+			}
+			currentDate := currentFullDate[:10]
+
+			onDeleteDate := func() {
+				err := db.DeleteByDate(currentDate)
+				if err != nil {
+					log.Println(err)
+				}
+				loadData()
+			}
+
+			if before == nil {
+				row.SetHeader(ui.CreateDateHeader(currentDate, win.ListBox, onDeleteDate))
+				return
+			}
+
+			beforeFullDate := ""
+			if box, ok := before.Child().(*gtk.Box); ok {
+				beforeFullDate = box.Name()
+			}
+
+			if len(beforeFullDate) < 10 {
+				return
+			}
+			beforeDate := beforeFullDate[:10]
+
+			if currentDate != beforeDate {
+				row.SetHeader(ui.CreateDateHeader(currentDate, win.ListBox, onDeleteDate))
+			} else {
+				row.SetHeader(nil)
+			}
+		})
+
+		// Filter
+		win.ListBox.SetFilterFunc(func(row *gtk.ListBoxRow) bool {
+			query := strings.ToLower(win.SearchEntry.Text())
+			if query == "" {
+				return true
+			}
+			target := strings.ToLower(row.Name())
+			return strings.Contains(target, query)
+		})
+
+		win.SearchEntry.ConnectChanged(func() {
+			win.ListBox.InvalidateFilter()
+		})
+
 		// Clear
 		win.ClearButton.ConnectClicked(func() {
 			db.ClearHistory()
@@ -136,10 +144,14 @@ func main() {
 			obj.Call("org.freedesktop.Notifications.SetFocusMode", 0, !state)
 			if state {
 				log.Println("[go-notify-manager] 已開啟")
-				exec.Command("pactl", "set-sink-mute", "@DEFAULT_SINK@", "1").Run()
+				if err := exec.Command("pactl", "set-sink-mute", "@DEFAULT_SINK@", "0").Run(); err != nil {
+					log.Printf("[go-notify-manager] 取消靜音失敗: %v\n", err)
+				}
 			} else {
 				log.Println("[go-notify-manager] 已關閉")
-				exec.Command("pactl", "set-sink-mute", "@DEFAULT_SINK@", "0").Run()
+				if err := exec.Command("pactl", "set-sink-mute", "@DEFAULT_SINK@", "1").Run(); err != nil {
+					log.Printf("[go-notify-manager] 設定靜音失敗: %v\n", err)
+				}
 			}
 			return false
 		})
