@@ -83,10 +83,10 @@ func NewRow(timeStr string) *gtk.ListBoxRow {
 
 func NewHBox() *gtk.Box {
 	hbox := gtk.NewBox(gtk.OrientationHorizontal, 12)
-	hbox.SetMarginStart(15)
-	hbox.SetMarginEnd(15)
-	hbox.SetMarginTop(18)
-	hbox.SetMarginBottom(18)
+	hbox.SetMarginStart(10)
+	hbox.SetMarginEnd(10)
+	hbox.SetMarginTop(8)
+	hbox.SetMarginBottom(8)
 	hbox.SetHExpand(true)
 
 	return hbox
@@ -95,6 +95,7 @@ func NewHBox() *gtk.Box {
 func NewTitleLabel(sum string, urgency int) *gtk.Label {
 	titleLabel := gtk.NewLabel("")
 	titleLabel.SetSelectable(true)
+	titleLabel.AddCSSClass("title-label")
 	escapedSum := glib.MarkupEscapeText(sum)
 	titleLabel.SetMarkup(fmt.Sprintf("<span size='medium' weight='bold'>%s</span>", escapedSum))
 	titleLabel.SetXAlign(0)
@@ -102,7 +103,7 @@ func NewTitleLabel(sum string, urgency int) *gtk.Label {
 	titleLabel.SetWrap(true)
 	titleLabel.SetWrapMode(pango.WrapWordChar)
 	if urgency == 2 {
-		titleLabel.SetMarkup(fmt.Sprintf("<span foreground='red'><b>%s</b></span>", escapedSum))
+		titleLabel.SetMarkup(fmt.Sprintf("<span foreground='#f87171'><b>%s</b></span>", escapedSum))
 	}
 
 	return titleLabel
@@ -110,7 +111,8 @@ func NewTitleLabel(sum string, urgency int) *gtk.Label {
 
 func NewIcon(iconName string) *gtk.Image {
 	img := gtk.NewImageFromIconName(iconName)
-	img.SetPixelSize(48)
+	img.SetPixelSize(36)
+	img.SetVAlign(gtk.AlignStart)
 	return img
 }
 

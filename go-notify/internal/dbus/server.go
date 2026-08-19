@@ -72,15 +72,6 @@ func (s *NotificationServer) Notify(appName string, replacesID uint32, appIcon s
 	atomic.AddUint32(&notifyID, 1)
 	currentID := atomic.LoadUint32(&notifyID)
 
-	// 處理 body
-	runes := []rune(body)
-	result := ""
-	if len(runes) > 45 {
-		result = string(runes[:45])
-	} else {
-		result = string(runes)
-	}
-
 	urgency := getUrgency(hints)
 	desktopEntry := getDesktopEntry(hints)
 	defaultKey := getDefaultActionKey(actions)
@@ -90,7 +81,7 @@ func (s *NotificationServer) Notify(appName string, replacesID uint32, appIcon s
 		AppName:    appName,
 		ReplacesId: replacesID,
 		Summary:    summary,
-		Body:       result,
+		Body:       body,
 		Urgency:    int(urgency),
 		Icon:       notifyAppIcon,
 		Time:       time.Now(),

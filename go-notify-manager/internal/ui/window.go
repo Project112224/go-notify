@@ -84,30 +84,38 @@ func ApplyCustomCSS(cssData []byte) {
 }
 
 func NewSafeArea() *gtk.Box {
-	vBox := gtk.NewBox(gtk.OrientationVertical, 10)
-	vBox.SetMarginTop(15)
-	vBox.SetMarginBottom(15)
-	vBox.SetMarginStart(15)
-	vBox.SetMarginEnd(15)
+	vBox := gtk.NewBox(gtk.OrientationVertical, 8)
+	vBox.SetMarginTop(12)
+	vBox.SetMarginBottom(12)
+	vBox.SetMarginStart(12)
+	vBox.SetMarginEnd(12)
 	return vBox
 }
 
 func NewSearchEntry() *gtk.SearchEntry {
 	searchEntry := gtk.NewSearchEntry()
 	searchEntry.SetPlaceholderText("搜尋通知 (標題或內容)...")
-	searchEntry.SetMarginBottom(10)
+	searchEntry.SetMarginBottom(8)
 	return searchEntry
 }
 
 func NewHeader() *HeaderResult {
-	header := gtk.NewBox(gtk.OrientationHorizontal, 5)
+	header := gtk.NewBox(gtk.OrientationHorizontal, 10)
+	header.AddCSSClass("header-box")
 
 	notifSwitch := gtk.NewSwitch()
 	notifSwitch.SetActive(true)
+	notifSwitch.AddCSSClass("custom-switch")
+	notifSwitch.SetVAlign(gtk.AlignCenter)
+	notifSwitch.SetHAlign(gtk.AlignStart)
+	notifSwitch.SetTooltipText("開啟 / 關閉通知提醒與音效")
 
 	titleLabel := gtk.NewLabel("歷史通知紀錄")
+	titleLabel.AddCSSClass("header-title")
 	titleLabel.SetHExpand(true)
+
 	clearBtn := gtk.NewButtonWithLabel("清除全部")
+	clearBtn.AddCSSClass("clear-button")
 
 	header.Append(notifSwitch)
 	header.Append(titleLabel)
