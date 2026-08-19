@@ -1,0 +1,28 @@
+# Executables & Binaries
+go-notify/go-notify
+go-notify-manager/go-notify-manager
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Database & SQLite files
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+history.db
+
+# Log files
+*.log
+
+# OS & IDE files
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
