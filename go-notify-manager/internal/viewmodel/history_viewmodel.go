@@ -10,10 +10,10 @@ import (
 )
 
 type HistoryViewModel struct {
-	repo         repository.HistoryRepository
-	focusSvc     services.FocusModeService
-	items        []models.HistoryItem
-	SearchQuery  string
+	repo           repository.HistoryRepository
+	focusSvc       services.FocusModeService
+	items          []models.HistoryItem
+	SearchQuery    string
 	IsNotifEnabled bool
 
 	OnItemsUpdated     func(items []models.HistoryItem)
@@ -35,6 +35,13 @@ func (vm *HistoryViewModel) LoadHistory() {
 	}
 	vm.items = items
 	vm.notifyItemsUpdated()
+}
+
+func (vm *HistoryViewModel) MarkAllAsRead() {
+	if err := vm.repo.MarkAllAsRead(); err != nil {
+		log.Printf("[HistoryViewModel] 標記已讀失敗: %v", err)
+	}
+	vm.LoadHistory()
 }
 
 func (vm *HistoryViewModel) SetSearchQuery(query string) {

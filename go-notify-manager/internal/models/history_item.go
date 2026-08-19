@@ -8,4 +8,5 @@ type HistoryItem struct {
 	Urgency   int    `json:"urgency"`
 	IconPath  string `json:"icon_path"`
 	CreatedAt string `json:"created_at"`
+	IsRead    bool   `json:"is_read"`
 }

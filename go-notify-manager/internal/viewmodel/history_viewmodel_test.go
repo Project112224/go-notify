@@ -14,6 +14,13 @@ func (m *MockHistoryRepository) LoadAll() ([]models.HistoryItem, error) {
 	return m.items, nil
 }
 
+func (m *MockHistoryRepository) MarkAllAsRead() error {
+	for i := range m.items {
+		m.items[i].IsRead = true
+	}
+	return nil
+}
+
 func (m *MockHistoryRepository) ClearAll() error {
 	m.items = nil
 	return nil
@@ -57,6 +64,25 @@ func TestHistoryViewModel_Filter(t *testing.T) {
 	filtered := vm.FilteredItems()
 	if len(filtered) != 1 || filtered[0].ID != 1 {
 		t.Errorf("Expected 1 item (Firefox), got %v", filtered)
+	}
+}
+
+func TestHistoryViewModel_MarkAllAsRead(t *testing.T) {
+	mockRepo := &MockHistoryRepository{
+		items: []models.HistoryItem{
+			{ID: 1, AppName: "Firefox", Summary: "Download complete", IsRead: false},
+			{ID: 2, AppName: "Discord", Summary: "New message", IsRead: false},
+		},
+	}
+
+	vm := NewHistoryViewModel(mockRepo, nil)
+	vm.MarkAllAsRead()
+
+	items := vm.FilteredItems()
+	for _, item := range items {
+		if !item.IsRead {
+			t.Errorf("Expected item %d to be marked as read", item.ID)
+		}
 	}
 }
 

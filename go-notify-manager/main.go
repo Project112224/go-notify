@@ -45,7 +45,7 @@ func main() {
 		kbService.BindShortcuts()
 
 		vm.InitFocusMode()
-		vm.LoadHistory()
+		vm.MarkAllAsRead()
 
 		win.Window.Present()
 	})

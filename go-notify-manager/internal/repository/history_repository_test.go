@@ -26,15 +26,16 @@ func setupTestDB(t *testing.T) (*SQLiteHistoryRepository, string) {
         body TEXT,
         urgency INTEGER,
         icon_path TEXT,
-        created_at DATETIME
+        created_at DATETIME,
+        is_read INTEGER DEFAULT 0
     );`
 	if _, err := db.Exec(query); err != nil {
 		t.Fatalf("Failed to init table: %v", err)
 	}
 
 	nowStr := time.Now().Format(time.RFC3339)
-	insertQuery := `INSERT INTO notifications (app_name, summary, body, urgency, icon_path, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?)`
+	insertQuery := `INSERT INTO notifications (app_name, summary, body, urgency, icon_path, created_at, is_read)
+                    VALUES (?, ?, ?, ?, ?, ?, 0)`
 	db.Exec(insertQuery, "Firefox", "Download done", "file.zip", 1, "firefox", nowStr)
 	db.Exec(insertQuery, "Discord", "Message", "Hello", 2, "discord", nowStr)
 	db.Close()
@@ -47,7 +48,7 @@ func setupTestDB(t *testing.T) (*SQLiteHistoryRepository, string) {
 	return repo, dbPath
 }
 
-func TestSQLiteHistoryRepository_LoadAllAndDelete(t *testing.T) {
+func TestSQLiteHistoryRepository_LoadAllMarkReadAndDelete(t *testing.T) {
 	repo, _ := setupTestDB(t)
 	defer repo.Close()
 
@@ -57,6 +58,18 @@ func TestSQLiteHistoryRepository_LoadAllAndDelete(t *testing.T) {
 	}
 	if len(items) != 2 {
 		t.Errorf("Expected 2 items, got %d", len(items))
+	}
+
+	// Test MarkAllAsRead
+	if err := repo.MarkAllAsRead(); err != nil {
+		t.Errorf("MarkAllAsRead failed: %v", err)
+	}
+
+	readItems, _ := repo.LoadAll()
+	for _, item := range readItems {
+		if !item.IsRead {
+			t.Errorf("Expected item %d to be read", item.ID)
+		}
 	}
 
 	// Test DeleteOne

@@ -32,7 +32,8 @@ func NewSQLiteHistoryRepository(dbPath string) (*SQLiteHistoryRepository, error)
         body TEXT,
         urgency INTEGER,
         icon_path TEXT,
-        created_at DATETIME
+        created_at DATETIME,
+        is_read INTEGER DEFAULT 0
     );
     PRAGMA journal_mode=WAL;`
 
@@ -40,12 +41,15 @@ func NewSQLiteHistoryRepository(dbPath string) (*SQLiteHistoryRepository, error)
 		return nil, err
 	}
 
+	// Auto-migration for existing tables without is_read column
+	_, _ = db.Exec("ALTER TABLE notifications ADD COLUMN is_read INTEGER DEFAULT 0;")
+
 	return &SQLiteHistoryRepository{db: db}, nil
 }
 
 func (r *SQLiteHistoryRepository) Save(n *models.HistoryNotif) error {
-	query := `INSERT INTO notifications (app_name, summary, body, urgency, icon_path, created_at)
-              VALUES (?, ?, ?, ?, ?, ?)`
+	query := `INSERT INTO notifications (app_name, summary, body, urgency, icon_path, created_at, is_read)
+              VALUES (?, ?, ?, ?, ?, ?, 0)`
 	_, err := r.db.Exec(query, n.AppName, n.Summary, n.Body, n.Urgency, n.Icon, time.Now())
 	return err
 }
