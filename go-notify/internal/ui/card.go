@@ -91,16 +91,42 @@ func createTextContainer(summary string, content string) *gtk.Box {
 }
 
 func (ctrl *NotifWindow) setCardGestures(card *gtk.Box, notif *models.Notification, isHovering *bool) {
-	gesture := gtk.NewGestureClick()
-	gesture.SetButton(0)
-	gesture.ConnectPressed(func(nPress int, x, y float64) {
-		button := gesture.CurrentButton()
+	// 1. 滑鼠 / 觸控板點擊手勢 (包含左鍵 Button 1、中鍵 Button 2、右鍵/雙指點擊 Button 3)
+	click := gtk.NewGestureClick()
+	click.SetButton(0)
+	click.SetPropagationPhase(gtk.PhaseCapture)
+	click.ConnectPressed(func(nPress int, x, y float64) {
+		button := click.CurrentButton()
 		if ctrl.VM != nil {
 			ctrl.VM.HandleCardClick(notif, button)
 		}
 		ctrl.dismissCard(card)
 	})
-	card.AddController(gesture)
+	card.AddController(click)
+
+	// 2. 觸控板雙指滑動 / 撥動手勢 (Swipe)
+	swipe := gtk.NewGestureSwipe()
+	swipe.SetButton(0)
+	swipe.SetPropagationPhase(gtk.PhaseCapture)
+	swipe.ConnectSwipe(func(vx, vy float64) {
+		if ctrl.VM != nil {
+			ctrl.VM.HandleCardClick(notif, 3)
+		}
+		ctrl.dismissCard(card)
+	})
+	card.AddController(swipe)
+
+	// 3. 觸控板雙指滾動手勢 (Scroll)
+	scroll := gtk.NewEventControllerScroll(gtk.EventControllerScrollBothAxes)
+	scroll.SetPropagationPhase(gtk.PhaseCapture)
+	scroll.ConnectScroll(func(dx, dy float64) bool {
+		if ctrl.VM != nil {
+			ctrl.VM.HandleCardClick(notif, 3)
+		}
+		ctrl.dismissCard(card)
+		return true
+	})
+	card.AddController(scroll)
 }
 
 func (ctrl *NotifWindow) dismissCard(card *gtk.Box) {
