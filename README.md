@@ -109,7 +109,31 @@ make install
 
 > **提示**: 請確保 `~/.local/bin` 已加入您的 `PATH` 環境變數中。
 
-### 3. 清理編譯產物
+### 3. 自動化測試與程式碼品質檢查
+
+本專案提供完整的單元測試、UI 測試、競態檢測、靜態分析、模糊測試與效能 Benchmarks：
+
+```bash
+# 執行單元與 UI 測試
+make test
+
+# 執行靜態程式碼分析 (go vet)
+make vet
+
+# 執行競態條件檢測 (Race Detector)
+make test-race
+
+# 執行效能與記憶體配置基準測試 (Benchmark & Memory Allocs)
+make bench
+
+# 執行模糊測試 (Fuzz Testing，預設 FUZZTIME=10s)
+make fuzz FUZZTIME=10s
+
+# 一鍵執行所有品質檢查與測試 (vet, test, test-race, bench)
+make check-all
+```
+
+### 4. 清理編譯產物
 
 ```bash
 make clean

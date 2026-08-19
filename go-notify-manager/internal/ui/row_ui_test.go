@@ -39,14 +39,18 @@ func TestLinkify(t *testing.T) {
 }
 
 func TestNewHistoryRowUI(t *testing.T) {
-	gtk.Init()
+	app := gtk.NewApplication("com.github.test.row", 0)
+	app.ConnectActivate(func() {
+		defer app.Quit()
 
-	row := NewHistoryRow("Firefox", "Download Done", "file.zip", "firefox", 1, "2026-08-19T15:30:00Z", func() {})
-	if row == nil {
-		t.Fatalf("Expected ListBoxRow widget, got nil")
-	}
+		row := NewHistoryRow("Firefox", "Download Done", "file.zip", "firefox", 1, "2026-08-19T15:30:00Z", func() {})
+		if row == nil {
+			t.Fatalf("Expected ListBoxRow widget, got nil")
+		}
 
-	if !row.HasCSSClass("history-row") {
-		t.Errorf("Expected row to have CSS class 'history-row'")
-	}
+		if !row.HasCSSClass("history-row") {
+			t.Errorf("Expected row to have CSS class 'history-row'")
+		}
+	})
+	app.Run(nil)
 }
