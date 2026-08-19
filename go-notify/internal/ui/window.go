@@ -5,19 +5,18 @@ import (
 	"github.com/diamondburned/gotk4/pkg/gdk/v4"
 	glib "github.com/diamondburned/gotk4/pkg/glib/v2"
 	"github.com/diamondburned/gotk4/pkg/gtk/v4"
-	"github.com/godbus/dbus/v5"
 
 	"go-notify/internal/models"
+	"go-notify/internal/viewmodel"
 )
 
 type NotifWindow struct {
 	List   *gtk.ListBox
 	Window *gtk.ApplicationWindow
-	Conn   *dbus.Conn
+	VM     *viewmodel.NotificationViewModel
 }
 
-func NewNotifWindow(app *gtk.Application, cssData []byte) *NotifWindow {
-
+func NewNotifWindow(app *gtk.Application, cssData []byte, vm *viewmodel.NotificationViewModel) *NotifWindow {
 	appWin := gtk.NewApplicationWindow(app)
 	window := &appWin.Window
 
@@ -54,7 +53,7 @@ func NewNotifWindow(app *gtk.Application, cssData []byte) *NotifWindow {
 	window.SetChild(mainBox)
 	window.Present()
 
-	return &NotifWindow{Window: appWin, List: list}
+	return &NotifWindow{Window: appWin, List: list, VM: vm}
 }
 
 func (ctrl *NotifWindow) Listen(notifChan chan *models.Notification) {

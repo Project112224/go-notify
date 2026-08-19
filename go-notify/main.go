@@ -5,12 +5,13 @@ import (
 	"os"
 	"path/filepath"
 
-	"go-notify/internal/database"
 	dbus "go-notify/internal/dbus"
+	"go-notify/internal/models"
+	"go-notify/internal/repository"
+	"go-notify/internal/service"
 	ui "go-notify/internal/ui"
 	"go-notify/internal/util"
-
-	"go-notify/internal/models"
+	"go-notify/internal/viewmodel"
 
 	_ "github.com/mattn/go-sqlite3"
 
@@ -31,26 +32,30 @@ func main() {
 	home, _ := os.UserHomeDir()
 
 	dbUrl := filepath.Join(home, dbPath)
-	os.MkdirAll(dbUrl, 0755)
-	dbSvc, err := database.NewDBService(dbUrl)
+	os.MkdirAll(filepath.Dir(dbUrl), 0755)
+
+	repo, err := repository.NewSQLiteHistoryRepository(dbUrl)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer dbSvc.Close()
+	defer repo.Close()
+
+	launcherSvc := service.NewDesktopLauncherService()
+	vm := viewmodel.NewNotificationViewModel(launcherSvc)
 
 	app := gtk.NewApplication("com.github.june.notif-center", 0)
 	app.ConnectActivate(func() {
-		conn, err := dbus.StartServer(notifChan, dbSvc)
+		conn, err := dbus.StartServer(notifChan, repo)
 		if err != nil {
 			log.Fatal(err)
 		}
+		vm.Conn = conn
 
 		data, err := os.ReadFile(filepath.Join(home, stylePath))
 		if err != nil {
-			log.Print("[Go-Notify] %s", err)
+			log.Printf("[Go-Notify] %s", err)
 		}
-		win := ui.NewNotifWindow(app, data)
-		win.Conn = conn
+		win := ui.NewNotifWindow(app, data, vm)
 		win.Listen(notifChan)
 	})
 

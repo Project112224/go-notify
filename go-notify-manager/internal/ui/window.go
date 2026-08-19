@@ -4,6 +4,9 @@ import (
 	"github.com/diamondburned/gotk4/pkg/gdk/v4"
 	"github.com/diamondburned/gotk4/pkg/glib/v2"
 	"github.com/diamondburned/gotk4/pkg/gtk/v4"
+
+	"go-notify-manager/internal/models"
+	"go-notify-manager/internal/viewmodel"
 )
 
 type Window struct {
@@ -12,6 +15,7 @@ type Window struct {
 	ClearButton  *gtk.Button
 	SearchEntry  *gtk.SearchEntry
 	SwitchButton *gtk.Switch
+	VM           *viewmodel.HistoryViewModel
 }
 
 type HeaderResult struct {
@@ -25,32 +29,116 @@ type ListViewResult struct {
 	ListBox  *gtk.ListBox
 }
 
-func NewWindow(app *gtk.Application, cssData []byte) *Window {
+func NewWindow(app *gtk.Application, cssData []byte, vm *viewmodel.HistoryViewModel) *Window {
 	win := CreateWindow(app)
 	SetSettings(cssData)
 
 	safeArea := NewSafeArea()
 	win.SetChild(safeArea)
 
-	// Header 區域
 	headerResult := NewHeader()
 	safeArea.Append(headerResult.Header)
 
 	searchEntry := NewSearchEntry()
 	safeArea.Append(searchEntry)
 
-	// 列表區域
 	listViewResult := NewListView()
 	safeArea.Append(listViewResult.Scrolled)
 
 	SetGesture(win)
 
-	return &Window{
+	w := &Window{
 		Window:       win,
 		ListBox:      listViewResult.ListBox,
 		ClearButton:  headerResult.ClearBtn,
 		SearchEntry:  searchEntry,
 		SwitchButton: headerResult.NotifSwitch,
+		VM:           vm,
+	}
+
+	w.BindViewModel()
+	return w
+}
+
+func (w *Window) BindViewModel() {
+	if w.VM == nil {
+		return
+	}
+
+	w.VM.OnItemsUpdated = func(items []models.HistoryItem) {
+		glib.IdleAdd(func() {
+			w.renderItems(items)
+		})
+	}
+
+	w.VM.OnFocusModeUpdated = func(enabled bool) {
+		glib.IdleAdd(func() {
+			w.SwitchButton.SetActive(enabled)
+		})
+	}
+
+	w.SearchEntry.ConnectChanged(func() {
+		w.VM.SetSearchQuery(w.SearchEntry.Text())
+	})
+
+	w.ClearButton.ConnectClicked(func() {
+		w.VM.ClearAll()
+	})
+
+	w.SwitchButton.ConnectStateSet(func(state bool) bool {
+		w.VM.ToggleNotificationStatus(state)
+		return false
+	})
+
+	w.ListBox.SetHeaderFunc(func(row *gtk.ListBoxRow, before *gtk.ListBoxRow) {
+		currentFullDate := ""
+		if box, ok := row.Child().(*gtk.Box); ok {
+			currentFullDate = box.Name()
+		}
+
+		if len(currentFullDate) < 10 {
+			return
+		}
+		currentDate := currentFullDate[:10]
+
+		onDeleteDate := func() {
+			w.VM.DeleteDateGroup(currentDate)
+		}
+
+		if before == nil {
+			row.SetHeader(CreateDateHeader(currentDate, w.ListBox, onDeleteDate))
+			return
+		}
+
+		beforeFullDate := ""
+		if box, ok := before.Child().(*gtk.Box); ok {
+			beforeFullDate = box.Name()
+		}
+
+		if len(beforeFullDate) < 10 {
+			return
+		}
+		beforeDate := beforeFullDate[:10]
+
+		if currentDate != beforeDate {
+			row.SetHeader(CreateDateHeader(currentDate, w.ListBox, onDeleteDate))
+		} else {
+			row.SetHeader(nil)
+		}
+	})
+}
+
+func (w *Window) renderItems(items []models.HistoryItem) {
+	for child := w.ListBox.FirstChild(); child != nil; child = w.ListBox.FirstChild() {
+		w.ListBox.Remove(child)
+	}
+
+	for _, item := range items {
+		itemID := item.ID
+		row := NewHistoryRow(item.AppName, item.Summary, item.Body, item.IconPath, item.Urgency, item.CreatedAt, func() {
+			w.VM.DeleteSingleItem(itemID)
+		})
+		w.ListBox.Append(row)
 	}
 }
 
@@ -67,7 +155,6 @@ func SetSettings(cssData []byte) {
 	if len(cssData) > 0 {
 		ApplyCustomCSS(cssData)
 	}
-
 }
 
 func ApplyCustomCSS(cssData []byte) {
@@ -191,7 +278,6 @@ func CreateDateHeader(dateText string, listbox *gtk.ListBox, onDeleteDate func()
 	click.ConnectReleased(func(n int, x, y float64) {
 		isCollapsed = !isCollapsed
 
-		// 切換箭頭圖示
 		if isCollapsed {
 			arrow.SetFromIconName("pan-end-symbolic")
 		} else {
@@ -209,7 +295,6 @@ func CreateDateHeader(dateText string, listbox *gtk.ListBox, onDeleteDate func()
 			}
 
 			if row.HasCSSClass(targetDateClass) && row.HasCSSClass("is-content") {
-
 				if row.Header() != nil {
 					if child := row.Child(); child != nil {
 						if widget, ok := child.(*gtk.Widget); ok {

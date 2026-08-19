@@ -14,8 +14,8 @@ import (
 
 	"github.com/godbus/dbus/v5"
 
-	"go-notify/internal/database"
 	"go-notify/internal/models"
+	"go-notify/internal/repository"
 )
 
 var notifyID uint32
@@ -23,11 +23,11 @@ var notifyID uint32
 type NotificationServer struct {
 	conn      *dbus.Conn
 	notifChan chan *models.Notification
-	dbService *database.DBService
+	repo      repository.HistoryRepository
 	Locked    bool
 }
 
-func StartServer(notifChan chan *models.Notification, abService *database.DBService) (*dbus.Conn, error) {
+func StartServer(notifChan chan *models.Notification, repo repository.HistoryRepository) (*dbus.Conn, error) {
 	conn, err := dbus.ConnectSessionBus()
 	if err != nil {
 		return nil, err
@@ -36,7 +36,7 @@ func StartServer(notifChan chan *models.Notification, abService *database.DBServ
 	server := &NotificationServer{
 		conn:      conn,
 		notifChan: notifChan,
-		dbService: abService,
+		repo:      repo,
 	}
 	conn.Export(server, "/org/freedesktop/Notifications", "org.freedesktop.Notifications")
 
@@ -48,11 +48,9 @@ func StartServer(notifChan chan *models.Notification, abService *database.DBServ
 	return conn, nil
 }
 
-// TODO: 核心業務邏輯
-// test: gdbus call --session --dest org.freedesktop.Notifications --object-path /org/freedesktop/Notifications --method org.freedesktop.Notifications.SetFocusMode true
 func (s *NotificationServer) SetFocusMode(enabled bool) *dbus.Error {
 	s.Locked = enabled
-	fmt.Printf("通知伺服器狀態更新：鎖定=%v\n", enabled)
+	log.Printf("[DBusServer] 通知伺服器狀態更新：鎖定=%v\n", enabled)
 	return nil
 }
 
@@ -61,14 +59,11 @@ func (s *NotificationServer) GetFocusMode() (bool, *dbus.Error) {
 }
 
 func (s *NotificationServer) Notify(appName string, replacesID uint32, appIcon string, summary string, body string, actions []string, hints map[string]dbus.Variant, expireTimeout int32) (uint32, *dbus.Error) {
-
-	// log
 	for key, variant := range hints {
 		strVal := variantToString(variant)
 		log.Printf("Hint Key: %s, Value: %s", key, strVal)
 	}
 
-	// 處理 id
 	atomic.AddUint32(&notifyID, 1)
 	currentID := atomic.LoadUint32(&notifyID)
 
@@ -77,15 +72,17 @@ func (s *NotificationServer) Notify(appName string, replacesID uint32, appIcon s
 	defaultKey := getDefaultActionKey(actions)
 	notifyAppIcon := getAppIcon(hints, appIcon)
 
-	s.dbService.Save(&models.HistoryNotif{
-		AppName:    appName,
-		ReplacesId: replacesID,
-		Summary:    summary,
-		Body:       body,
-		Urgency:    int(urgency),
-		Icon:       notifyAppIcon,
-		Time:       time.Now(),
-	})
+	if s.repo != nil {
+		s.repo.Save(&models.HistoryNotif{
+			AppName:    appName,
+			ReplacesId: replacesID,
+			Summary:    summary,
+			Body:       body,
+			Urgency:    int(urgency),
+			Icon:       notifyAppIcon,
+			Time:       time.Now(),
+		})
+	}
 
 	if s.Locked {
 		return currentID, nil
@@ -105,7 +102,6 @@ func (s *NotificationServer) Notify(appName string, replacesID uint32, appIcon s
 	return currentID, nil
 }
 
-// Low: 0, Normal: 1, High: 2
 func getUrgency(hints map[string]dbus.Variant) uint8 {
 	urgency := uint8(1)
 	if v, ok := hints["urgency"]; ok {
@@ -157,7 +153,6 @@ func getAppIcon(hints map[string]dbus.Variant, appIcon string) string {
 	return icon
 }
 
-// 將 Notify Hints 轉換為字串
 func variantToString(v dbus.Variant) string {
 	val := v.Value()
 
@@ -185,7 +180,6 @@ func saveImageDataToTmp(hint dbus.Variant) (string, error) {
 	height := int(data[1].(int32))
 	rowstride := int(data[2].(int32))
 	hasAlpha := data[3].(bool)
-	// bitsPerSample := data[4].(int32)
 	channels := int(data[5].(int32))
 	pixelBytes := data[6].([]byte)
 
@@ -221,8 +215,6 @@ func saveImageDataToTmp(hint dbus.Variant) (string, error) {
 
 	return tmpPath, nil
 }
-
-// TODO: D-Bus 協定規範方法
 
 func (s *NotificationServer) GetCapabilities() ([]string, *dbus.Error) {
 	return []string{"actions", "body", "body-markup", "icon-static"}, nil

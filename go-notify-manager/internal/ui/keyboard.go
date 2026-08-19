@@ -1,19 +1,17 @@
-package service
+package ui
 
 import (
 	"log"
-
-	"go-notify-manager/internal/ui"
 
 	"github.com/diamondburned/gotk4/pkg/gdk/v4"
 	"github.com/diamondburned/gotk4/pkg/gtk/v4"
 )
 
 type KeyboardService struct {
-	win *ui.Window
+	win *Window
 }
 
-func NewKeyboardService(win *ui.Window) *KeyboardService {
+func NewKeyboardService(win *Window) *KeyboardService {
 	return &KeyboardService{win: win}
 }
 

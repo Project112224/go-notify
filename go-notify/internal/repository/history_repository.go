@@ -1,4 +1,4 @@
-package database
+package repository
 
 import (
 	"database/sql"
@@ -9,11 +9,16 @@ import (
 	"go-notify/internal/models"
 )
 
-type DBService struct {
+type HistoryRepository interface {
+	Save(n *models.HistoryNotif) error
+	Close() error
+}
+
+type SQLiteHistoryRepository struct {
 	db *sql.DB
 }
 
-func NewDBService(dbPath string) (*DBService, error) {
+func NewSQLiteHistoryRepository(dbPath string) (*SQLiteHistoryRepository, error) {
 	db, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
 		return nil, err
@@ -35,16 +40,16 @@ func NewDBService(dbPath string) (*DBService, error) {
 		return nil, err
 	}
 
-	return &DBService{db}, nil
+	return &SQLiteHistoryRepository{db: db}, nil
 }
 
-func (s *DBService) Save(n *models.HistoryNotif) error {
+func (r *SQLiteHistoryRepository) Save(n *models.HistoryNotif) error {
 	query := `INSERT INTO notifications (app_name, summary, body, urgency, icon_path, created_at)
               VALUES (?, ?, ?, ?, ?, ?)`
-	_, err := s.db.Exec(query, n.AppName, n.Summary, n.Body, n.Urgency, n.Icon, time.Now())
+	_, err := r.db.Exec(query, n.AppName, n.Summary, n.Body, n.Urgency, n.Icon, time.Now())
 	return err
 }
 
-func (s *DBService) Close() {
-	s.db.Close()
+func (r *SQLiteHistoryRepository) Close() error {
+	return r.db.Close()
 }
